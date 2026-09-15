@@ -15,6 +15,8 @@ const elements = {
     comparisons: document.querySelector("#comparisons"),
     swaps: document.querySelector("#swaps"),
     operationLabel: document.querySelector("#operation-label"),
+    arrayInput: document.querySelector("#array-input"),
+    randomArrayButton: document.querySelector("#random-array-button"),
     targetInput: document.querySelector("#target-input"),
 
     bestComplexity: document.querySelector("#best-complexity"),
@@ -103,7 +105,10 @@ function updateStatistics() {
         } else if (algorithm === "merge") {
             elements.operationLabel.textContent =
                 "Writes";
-        } else if (algorithm === "linear") {
+        } else if (
+            algorithm === "linear" ||
+            algorithm === "binary"
+        ) {
             elements.operationLabel.textContent =
                 "Found Index";
         } else {
@@ -113,7 +118,10 @@ function updateStatistics() {
     }
 
     // Operation value
-    if (algorithm === "linear") {
+    if (
+        algorithm === "linear" ||
+        algorithm === "binary"
+    ) {
         if (visualizerState.swaps === -1) {
             elements.swaps.textContent = "—";
         } else {
@@ -173,6 +181,14 @@ function updateStatistics() {
             "O(n)";
         elements.worstComplexity.textContent =
             "O(n)";
+
+    } else if (algorithm === "binary") {
+        elements.bestComplexity.textContent =
+            "O(1)";
+        elements.averageComplexity.textContent =
+            "O(log n)";
+        elements.worstComplexity.textContent =
+            "O(log n)";
     }
 }
 
@@ -234,11 +250,32 @@ function resetVisualizer() {
     visualizerState.runId += 1;
     visualizerState.isSorting = false;
 
-    visualizerState.array =
-        generateRandomArray();
+    const inputText =
+        elements.arrayInput.value.trim();
+
+    if (inputText) {
+        const parsedArray =
+            inputText.split(",").map(
+                (value) => Number(value.trim())
+            );
+
+        if (
+            parsedArray.length > 0 &&
+            parsedArray.length <= 1000 &&
+            parsedArray.every(
+                (value) => Number.isInteger(value)
+            )
+        ) {
+            visualizerState.array =
+                [...parsedArray];
+        } else {
+            visualizerState.array = [];
+        }
+    } else {
+        visualizerState.array = [];
+    }
 
     visualizerState.comparisons = 0;
-
     visualizerState.swaps = 0;
 
     clearSortedState();
@@ -248,6 +285,11 @@ function resetVisualizer() {
     updateStatistics();
 
     setSortingControls(false);
+
+    elements.arrayStatus.textContent =
+        visualizerState.array.length > 0
+            ? `${visualizerState.array.length} values ready`
+            : "Enter an array to begin";
 }
 
 
@@ -265,10 +307,7 @@ function updateSpeed() {
  * Send the current array to Flask.
  * Flask runs the corresponding C executable.
  */
-async function runAlgorithmOnBackend(
-    array,
-    algorithm
-) {
+async function runAlgorithmOnBackend(array, algorithm) {
     let endpoint;
 
     let requestBody = {
@@ -298,6 +337,22 @@ async function runAlgorithmOnBackend(
     } else if (algorithm === "linear") {
         endpoint =
             "http://127.0.0.1:5000/api/linear-search";
+
+        const target = Number(
+            elements.targetInput.value
+        );
+
+        if (!Number.isInteger(target)) {
+            throw new Error(
+                "Please enter a valid search target."
+            );
+        }
+
+        requestBody.target = target;
+
+    } else if (algorithm === "binary") {
+        endpoint =
+            "http://127.0.0.1:5000/api/binary-search";
 
         const target = Number(
             elements.targetInput.value
@@ -346,15 +401,11 @@ async function runAlgorithmOnBackend(
     return data;
 }
 
-
 /**
  * Animate the exact steps returned
  * by the C algorithm engine.
  */
-async function animateBackendSteps(
-    originalArray,
-    result
-) {
+async function animateBackendSteps(originalArray, result) {
     const currentRunId =
         visualizerState.runId;
 
@@ -364,7 +415,6 @@ async function animateBackendSteps(
         [...originalArray];
 
     visualizerState.comparisons = 0;
-
     visualizerState.swaps = 0;
 
     renderArray();
@@ -393,10 +443,10 @@ async function animateBackendSteps(
             const target =
                 step.index2;
 
-            const bars = getBars();
+            const bars =
+                getBars();
 
 
-            // Compare
             if (
                 step.type ===
                 "compare"
@@ -427,7 +477,6 @@ async function animateBackendSteps(
             }
 
 
-            // Found
             if (
                 step.type ===
                 "found"
@@ -453,7 +502,6 @@ async function animateBackendSteps(
             }
 
 
-            // Not Found
             if (
                 step.type ===
                 "not_found"
@@ -466,12 +514,10 @@ async function animateBackendSteps(
                 await sleep();
             }
 
-
             clearBarHighlights();
         }
 
 
-        // Final Linear Search result
         if (
             currentRunId ===
             visualizerState.runId
@@ -518,6 +564,203 @@ async function animateBackendSteps(
 
 
     // =================================
+    // Binary Search
+    // =================================
+
+    if (
+        result.algorithm ===
+        "Binary Search"
+    ) {
+        for (const step of steps) {
+            if (
+                currentRunId !==
+                visualizerState.runId
+            ) {
+                return;
+            }
+
+            const index =
+                step.index1;
+
+            const target =
+                step.index2;
+
+            const bars =
+                getBars();
+
+
+            // Middle comparison
+            if (
+                step.type ===
+                "compare"
+            ) {
+                clearBarHighlights();
+
+                bars[index]?.classList.add(
+                    "comparing"
+                );
+
+                visualizerState.comparisons +=
+                    1;
+
+                updateStatistics();
+
+                elements.arrayStatus.textContent =
+                    `Checking middle index ${index}: ${visualizerState.array[index]} vs ${target}`;
+
+                await sleep();
+            }
+
+
+            if (
+                currentRunId !==
+                visualizerState.runId
+            ) {
+                return;
+            }
+
+
+            // Search right half
+            if (
+                step.type ===
+                "right"
+            ) {
+                clearBarHighlights();
+
+                bars[index]?.classList.add(
+                    "swapping"
+                );
+
+                elements.arrayStatus.textContent =
+                    `${visualizerState.array[index]} < ${target} → Searching right half`;
+
+                await sleep();
+            }
+
+
+            if (
+                currentRunId !==
+                visualizerState.runId
+            ) {
+                return;
+            }
+
+
+            // Search left half
+            if (
+                step.type ===
+                "left"
+            ) {
+                clearBarHighlights();
+
+                bars[index]?.classList.add(
+                    "swapping"
+                );
+
+                elements.arrayStatus.textContent =
+                    `${visualizerState.array[index]} > ${target} → Searching left half`;
+
+                await sleep();
+            }
+
+
+            if (
+                currentRunId !==
+                visualizerState.runId
+            ) {
+                return;
+            }
+
+
+            // Found
+            if (
+                step.type ===
+                "found"
+            ) {
+                clearBarHighlights();
+
+                bars[index]?.classList.add(
+                    "sorted"
+                );
+
+                elements.arrayStatus.textContent =
+                    `Found ${target} at index ${index}`;
+
+                await sleep();
+            }
+
+
+            if (
+                currentRunId !==
+                visualizerState.runId
+            ) {
+                return;
+            }
+
+
+            // Not Found
+            if (
+                step.type ===
+                "not_found"
+            ) {
+                clearBarHighlights();
+
+                elements.arrayStatus.textContent =
+                    `${target} was not found in the array`;
+
+                await sleep();
+            }
+
+            clearBarHighlights();
+        }
+
+
+        if (
+            currentRunId ===
+            visualizerState.runId
+        ) {
+            visualizerState.comparisons =
+                result.comparisons;
+
+            if (
+                result.found_index !==
+                -1
+            ) {
+                visualizerState.swaps =
+                    result.found_index;
+
+                const bars =
+                    getBars();
+
+                clearBarHighlights();
+
+                bars[
+                    result.found_index
+                ]?.classList.add(
+                    "sorted"
+                );
+
+                elements.arrayStatus.textContent =
+                    `Binary Search: ${result.target} found at index ${result.found_index}`;
+
+            } else {
+                visualizerState.swaps =
+                    -1;
+
+                clearBarHighlights();
+
+                elements.arrayStatus.textContent =
+                    `Binary Search: ${result.target} not found`;
+            }
+
+            updateStatistics();
+        }
+
+        return;
+    }
+
+
+    // =================================
     // Sorting Algorithms
     // =================================
 
@@ -539,7 +782,6 @@ async function animateBackendSteps(
             getBars();
 
 
-        // Compare
         if (
             step.type ===
             "compare"
@@ -572,7 +814,6 @@ async function animateBackendSteps(
         }
 
 
-        // Swap
         if (
             step.type ===
             "swap"
@@ -616,7 +857,6 @@ async function animateBackendSteps(
         }
 
 
-        // Merge Sort Write
         if (
             step.type ===
             "write"
@@ -656,7 +896,6 @@ async function animateBackendSteps(
     }
 
 
-    // Final sorting result
     if (
         currentRunId ===
         visualizerState.runId
@@ -712,7 +951,8 @@ async function startVisualization() {
         selectedAlgorithm !== "insertion" &&
         selectedAlgorithm !== "merge" &&
         selectedAlgorithm !== "quick" &&
-        selectedAlgorithm !== "linear"
+        selectedAlgorithm !== "linear" &&
+        selectedAlgorithm !== "binary"
     ) {
         elements.arrayStatus.textContent =
             "This algorithm is not implemented yet.";
@@ -721,11 +961,49 @@ async function startVisualization() {
     }
 
 
-    const currentRunId =
-        visualizerState.runId;
+    const inputText =
+    elements.arrayInput.value.trim();
 
-    visualizerState.isSorting =
-        true;
+if (!inputText) {
+    elements.arrayStatus.textContent =
+        "Please enter an array.";
+    return;
+}
+
+const parsedArray =
+    inputText.split(",").map(
+        (value) => Number(value.trim())
+    );
+
+if (
+    parsedArray.some(
+        (value) => !Number.isInteger(value)
+    )
+) {
+    elements.arrayStatus.textContent =
+        "Please enter valid integers separated by commas.";
+    return;
+}
+
+if (
+    parsedArray.length < 1 ||
+    parsedArray.length > 1000
+) {
+    elements.arrayStatus.textContent =
+        "Array size must be between 1 and 1000.";
+    return;
+}
+
+visualizerState.array =
+    [...parsedArray];
+
+renderArray();
+
+const currentRunId =
+    visualizerState.runId;
+
+visualizerState.isSorting =
+    true;
 
     setSortingControls(true);
 
@@ -733,7 +1011,7 @@ async function startVisualization() {
     clearBarHighlights();
 
 
-    const originalArray =
+    let originalArray =
         [...visualizerState.array];
 
 
@@ -776,16 +1054,28 @@ async function startVisualization() {
             algorithmName =
                 "Quick Sort";
 
-        } else {
+        } else if (
+            selectedAlgorithm ===
+            "linear"
+        ) {
             algorithmName =
                 "Linear Search";
+
+        } else {
+            algorithmName =
+                "Binary Search";
         }
 
 
-        // Validate Linear Search target
+        // =================================
+        // Search target validation
+        // =================================
+
         if (
             selectedAlgorithm ===
-            "linear"
+            "linear" ||
+            selectedAlgorithm ===
+            "binary"
         ) {
             const target =
                 Number(
@@ -800,6 +1090,38 @@ async function startVisualization() {
                 elements.arrayStatus.textContent =
                     "Please enter a valid search target.";
 
+                return;
+            }
+        }
+
+
+        // =================================
+        // Binary Search requires sorted array
+        // =================================
+
+        if (
+            selectedAlgorithm ===
+            "binary"
+        ) {
+            originalArray =
+                [...originalArray].sort(
+                    (a, b) => a - b
+                );
+
+            visualizerState.array =
+                [...originalArray];
+
+            renderArray();
+
+            elements.arrayStatus.textContent =
+                "Sorting array for Binary Search...";
+
+            await sleep();
+
+            if (
+                currentRunId !==
+                visualizerState.runId
+            ) {
                 return;
             }
         }
@@ -846,6 +1168,17 @@ async function startVisualization() {
     }
 }
 
+function updateTargetVisibility() {
+    const algorithm =
+        elements.algorithmSelect.value;
+
+    const isSearchAlgorithm =
+        algorithm === "linear" ||
+        algorithm === "binary";
+
+    elements.targetInput.parentElement.style.display =
+        isSearchAlgorithm ? "flex" : "none";
+}
 
 /** Initialize the visualizer. */
 function initializeVisualizer() {
@@ -864,7 +1197,42 @@ function initializeVisualizer() {
         startVisualization
     );
 
+    elements.randomArrayButton.addEventListener(
+        "click",
+        () => {
+            if (visualizerState.isSorting) {
+                return;
+            }
+
+            visualizerState.runId += 1;
+
+            visualizerState.array =
+                generateRandomArray();
+
+            visualizerState.comparisons = 0;
+            visualizerState.swaps = 0;
+
+            elements.arrayInput.value =
+                visualizerState.array.join(", ");
+
+            clearSortedState();
+            clearBarHighlights();
+
+            renderArray();
+            updateStatistics();
+
+            elements.arrayStatus.textContent =
+                `${visualizerState.array.length} values ready`;
+        }
+    );
+
+    elements.algorithmSelect.addEventListener(
+        "change",
+        updateTargetVisibility
+    );
+
     resetVisualizer();
+    updateTargetVisibility();
 }
 
 

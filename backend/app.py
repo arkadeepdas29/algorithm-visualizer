@@ -910,6 +910,155 @@ def linear_search():
         comparisons=comparisons,
         steps=steps
     )
+@app.post("/api/binary-search")
+def binary_search():
+    """Run the C Binary Search program and return its result."""
+
+    data = request.get_json(silent=True)
+
+    if not isinstance(data, dict):
+        return jsonify(
+            error="Request body must be a JSON object."
+        ), 400
+
+    array = data.get("array")
+    target = data.get("target")
+
+    if not isinstance(array, list):
+        return jsonify(
+            error="'array' must be a list."
+        ), 400
+
+    if not all(
+        isinstance(value, int) and not isinstance(value, bool)
+        for value in array
+    ):
+        return jsonify(
+            error="'array' must contain integers only."
+        ), 400
+
+    if not 1 <= len(array) <= 1000:
+        return jsonify(
+            error="Array size must be between 1 and 1000."
+        ), 400
+
+    if not isinstance(target, int) or isinstance(target, bool):
+        return jsonify(
+            error="'target' must be an integer."
+        ), 400
+
+    # Binary Search requires a sorted array.
+    if array != sorted(array):
+        return jsonify(
+            error="Binary Search requires a sorted array."
+        ), 400
+
+    # Locate binary_search.exe.
+    project_root = os.path.dirname(
+        os.path.dirname(os.path.abspath(__file__))
+    )
+
+    c_program = os.path.join(
+        project_root,
+        "c_engine",
+        "binary_search.exe"
+    )
+
+    if not os.path.exists(c_program):
+        return jsonify(
+            error="binary_search.exe was not found."
+        ), 500
+
+    # Input sent to C.
+    c_input = (
+        f"{len(array)}\n"
+        f"{' '.join(map(str, array))}\n"
+        f"{target}\n"
+    )
+
+    try:
+        result = subprocess.run(
+            [c_program],
+            input=c_input,
+            text=True,
+            capture_output=True,
+            timeout=5
+        )
+    except subprocess.TimeoutExpired:
+        return jsonify(
+            error="C program timed out."
+        ), 500
+    except OSError as error:
+        return jsonify(
+            error=f"Could not run C program: {error}"
+        ), 500
+
+    if result.returncode != 0:
+        return jsonify(
+            error="C Binary Search program failed.",
+            details=result.stderr.strip()
+        ), 500
+
+    # Read C output.
+    output_lines = result.stdout.strip().splitlines()
+
+    print(
+        "DEBUG C BINARY SEARCH OUTPUT:",
+        repr(result.stdout)
+    )
+
+    found_index = None
+    comparisons = None
+    steps = []
+
+    for line in output_lines:
+        line = line.strip()
+
+        if line.startswith("STEP:"):
+            parts = line.split(":")
+
+            if len(parts) == 4:
+                step_type = parts[1].lower()
+                index1 = int(parts[2])
+                index2 = int(parts[3])
+
+                steps.append({
+                    "type": step_type,
+                    "index1": index1,
+                    "index2": index2,
+                })
+
+        elif line.startswith("FOUND_INDEX:"):
+            found_index = int(
+                line.replace(
+                    "FOUND_INDEX:",
+                    "",
+                    1
+                ).strip()
+            )
+
+        elif line.startswith("COMPARISONS:"):
+            comparisons = int(
+                line.replace(
+                    "COMPARISONS:",
+                    "",
+                    1
+                ).strip()
+            )
+
+    if found_index is None or comparisons is None:
+        return jsonify(
+            error="Unexpected output from C Binary Search program.",
+            c_output=result.stdout
+        ), 500
+
+    return jsonify(
+        algorithm="Binary Search",
+        found_index=found_index,
+        target=target,
+        comparisons=comparisons,
+        steps=steps
+    )
 
 
 if __name__ == "__main__":
