@@ -81,14 +81,13 @@ algorithm-visualizer/
 │   ├── app.py
 │   └── requirements.txt
 ├── c_engine/
-│   ├── bubble_sort.c
-│   ├── selection_sort.c
-│   ├── insertion_sort.c
-│   ├── merge_sort.c
-│   ├── quick_sort.c
-│   ├── linear_search.c
-│   └── binary_search.c
-└── .gitignore
+    ├── bubble_sort.c
+    ├── selection_sort.c
+    ├── insertion_sort.c
+    ├── merge_sort.c
+    ├── quick_sort.c
+    ├── linear_search.c
+    └── binary_search.c
 ```
 
 ## Getting Started
