@@ -300,3 +300,26 @@ select:disabled {
     padding-top: 0;
   }
 }
+/* Time complexity details */
+.complexity-details{
+  display: grid;
+  gap: 0.45rem;
+  margin-top: 0.15rem;
+}
+.complexity-details div {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+}
+
+.complexity-details span {
+    color: var(--muted-text);
+    font-size: 0.82rem;
+    font-weight: 600;
+}
+
+.complexity-details strong {
+    font-size: 1rem;
+    font-weight: 700;
+}
