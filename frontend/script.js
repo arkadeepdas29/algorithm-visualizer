@@ -144,6 +144,9 @@ async function runAlgorithmOnBackend(array, algorithm) {
     } else if (algorithm === "insertion") {
         endpoint =
             "http://127.0.0.1:5000/api/insertion-sort";
+    } else if (algorithm === "merge") {
+        endpoint =
+            "http://127.0.0.1:5000/api/merge-sort";
     } else {
         throw new Error(
             "This algorithm is not implemented yet."
@@ -182,7 +185,6 @@ async function animateBackendSteps(originalArray, result) {
     const currentRunId = visualizerState.runId;
     const steps = result.steps;
 
-    // Start from the original array.
     visualizerState.array = [...originalArray];
     visualizerState.comparisons = 0;
     visualizerState.swaps = 0;
@@ -199,11 +201,10 @@ async function animateBackendSteps(originalArray, result) {
         const index2 = step.index2;
         const bars = getBars();
 
-        // Highlight the two elements being compared/swapped.
-        bars[index1]?.classList.add("comparing");
-        bars[index2]?.classList.add("comparing");
-
         if (step.type === "compare") {
+            bars[index1]?.classList.add("comparing");
+            bars[index2]?.classList.add("comparing");
+
             visualizerState.comparisons += 1;
 
             updateStatistics();
@@ -218,33 +219,20 @@ async function animateBackendSteps(originalArray, result) {
             return;
         }
 
-        if (step.type === "swap") {
-            [
-                visualizerState.array[index1],
-                visualizerState.array[index2],
-            ] = [
-                visualizerState.array[index2],
-                visualizerState.array[index1],
-            ];
+        if (step.type === "write") {
+            const bar = bars[index1];
+
+            bar?.classList.add("swapping");
+
+            visualizerState.array[index1] = index2;
 
             visualizerState.swaps += 1;
 
-            bars[index1]?.classList.replace(
-                "comparing",
-                "swapping"
-            );
-
-            bars[index2]?.classList.replace(
-                "comparing",
-                "swapping"
-            );
-
             updateBar(index1);
-            updateBar(index2);
             updateStatistics();
 
             elements.arrayStatus.textContent =
-                `Swapping index ${index1} and ${index2}`;
+                `Writing ${index2} at index ${index1}`;
 
             await sleep();
         }
@@ -257,12 +245,10 @@ async function animateBackendSteps(originalArray, result) {
     }
 
     if (currentRunId === visualizerState.runId) {
-        // Use the final result returned by C.
         visualizerState.array = [...result.sorted_array];
 
-        // Use the authoritative totals from C.
         visualizerState.comparisons = result.comparisons;
-        visualizerState.swaps = result.swaps;
+        visualizerState.swaps = result.writes;
 
         renderArray();
         updateStatistics();
@@ -272,7 +258,7 @@ async function animateBackendSteps(originalArray, result) {
         });
 
         elements.arrayStatus.textContent =
-            "Array sorted by C Bubble Sort";
+            "Array sorted by C Merge Sort";
     }
 }
 
@@ -288,7 +274,8 @@ async function startVisualization() {
     if (
         selectedAlgorithm !== "bubble" &&
         selectedAlgorithm !== "selection" &&
-        selectedAlgorithm !== "insertion"
+        selectedAlgorithm !== "insertion" &&
+        selectedAlgorithm !== "merge"
     ) {
         elements.arrayStatus.textContent =
             "This algorithm is not implemented yet.";
@@ -306,12 +293,17 @@ async function startVisualization() {
     const originalArray = [...visualizerState.array];
 
     try {
-        const algorithmName =
-            selectedAlgorithm === "bubble"
-                ? "Bubble Sort"
-                : selectedAlgorithm === "selection"
-                  ? "Selection Sort"
-                  : "Insertion Sort";
+        let algorithmName;
+
+        if (selectedAlgorithm === "bubble") {
+            algorithmName = "Bubble Sort";
+        } else if (selectedAlgorithm === "selection") {
+            algorithmName = "Selection Sort";
+        } else if (selectedAlgorithm === "insertion") {
+            algorithmName = "Insertion Sort";
+        } else {
+            algorithmName = "Merge Sort";
+        }
 
         elements.arrayStatus.textContent =
             `Sending array to C ${algorithmName}...`;
