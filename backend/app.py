@@ -1,16 +1,16 @@
-"""A minimal Flask API for the Algorithm Visualizer project."""
+"""Flask API for the Algorithm Visualizer project."""
 
-from flask import Flask, jsonify
+import os
+import subprocess
 
+from flask import Flask, jsonify, request
 
-# Create the Flask application. __name__ helps Flask find this file's resources.
 app = Flask(__name__)
 
 
 @app.get("/")
 def home():
     """Return a small response to confirm that the API is running."""
-    # jsonify converts this Python dictionary into a JSON HTTP response.
     return jsonify(message="Algorithm Visualizer API is running")
 
 
@@ -20,7 +20,114 @@ def api_status():
     return jsonify(status="success", message="Backend is working")
 
 
+@app.post("/api/bubble-sort")
+def bubble_sort():
+    """Run the C Bubble Sort program and return its result."""
+
+    data = request.get_json(silent=True)
+
+    if not isinstance(data, dict):
+        return jsonify(error="Request body must be a JSON object."), 400
+
+    array = data.get("array")
+
+    if not isinstance(array, list):
+        return jsonify(error="'array' must be a list."), 400
+
+    if not all(isinstance(value, int) and not isinstance(value, bool)
+               for value in array):
+        return jsonify(error="'array' must contain integers only."), 400
+
+    if not 1 <= len(array) <= 1000:
+        return jsonify(
+            error="Array size must be between 1 and 1000."
+        ), 400
+
+    # Locate bubble_sort.exe.
+    project_root = os.path.dirname(
+        os.path.dirname(os.path.abspath(__file__))
+    )
+
+    c_program = os.path.join(
+        project_root,
+        "c_engine",
+        "bubble_sort.exe"
+    )
+
+    if not os.path.exists(c_program):
+        return jsonify(
+            error="bubble_sort.exe was not found."
+        ), 500
+
+    # Input sent to C.
+    c_input = f"{len(array)}\n{' '.join(map(str, array))}\n"
+
+    try:
+        result = subprocess.run(
+            [c_program],
+            input=c_input,
+            text=True,
+            capture_output=True,
+            timeout=5
+        )
+    except subprocess.TimeoutExpired:
+        return jsonify(error="C program timed out."), 500
+    except OSError as error:
+        return jsonify(
+            error=f"Could not run C program: {error}"
+        ), 500
+
+    if result.returncode != 0:
+        return jsonify(
+            error="C Bubble Sort program failed.",
+            details=result.stderr.strip()
+        ), 500
+
+    # Read C output.
+    output_lines = result.stdout.strip().splitlines()
+
+    sorted_array = None
+    comparisons = None
+    swaps = None
+
+    for line in output_lines:
+        line = line.strip()
+
+        if line.startswith("SORTED:"):
+            numbers = line.replace("SORTED:", "", 1).strip()
+
+            if numbers:
+                sorted_array = [int(value) for value in numbers.split()]
+            else:
+                sorted_array = []
+
+        elif line.startswith("COMPARISONS:"):
+            comparisons = int(
+                line.replace("COMPARISONS:", "", 1).strip()
+            )
+
+        elif line.startswith("SWAPS:"):
+            swaps = int(
+                line.replace("SWAPS:", "", 1).strip()
+            )
+
+    if sorted_array is None or comparisons is None or swaps is None:
+        return jsonify(
+            error="Unexpected output from C Bubble Sort program.",
+            c_output=result.stdout
+        ), 500
+
+    return jsonify(
+        algorithm="Bubble Sort",
+        sorted_array=sorted_array,
+        comparisons=comparisons,
+        swaps=swaps
+    )
+
+
 if __name__ == "__main__":
-    # Start Flask's development server at http://127.0.0.1:5000.
-    # Run from the project root with: python backend/app.py
-    app.run(host="127.0.0.1", port=5000, debug=True)
+    app.run(
+        host="127.0.0.1",
+        port=5000,
+        debug=True
+    )

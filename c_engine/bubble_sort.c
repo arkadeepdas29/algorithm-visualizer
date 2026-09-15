@@ -19,7 +19,12 @@ void printArray(const int array[], int size) {
  * Sort an array in ascending order using Bubble Sort.
  * The pointer parameters allow this function to update both counters for main.
  */
-void bubbleSort(int array[], int size, unsigned long long *comparisons, unsigned long long *swaps) {
+void bubbleSort(
+    int array[],
+    int size,
+    unsigned long long *comparisons,
+    unsigned long long *swaps
+) {
     for (int end = size - 1; end > 0; end--) {
         int swappedInThisPass = 0;
 
@@ -46,37 +51,44 @@ void bubbleSort(int array[], int size, unsigned long long *comparisons, unsigned
 int main(void) {
     int array[MAX_ARRAY_SIZE];
     int numberOfElements;
+
     unsigned long long comparisons = 0;
     unsigned long long swaps = 0;
 
-    printf("Enter number of elements: ");
+    /* Read number of elements from stdin. */
     if (scanf("%d", &numberOfElements) != 1) {
-        printf("Invalid input. Please enter a whole number.\n");
+        fprintf(stderr, "Invalid input.\n");
         return 1;
     }
 
     if (numberOfElements < 1 || numberOfElements > MAX_ARRAY_SIZE) {
-        printf("Please enter a number from 1 to %d.\n", MAX_ARRAY_SIZE);
+        fprintf(stderr, "Number of elements must be between 1 and %d.\n",
+                MAX_ARRAY_SIZE);
         return 1;
     }
 
-    printf("Enter elements:\n");
+    /* Read array elements from stdin. */
     for (int index = 0; index < numberOfElements; index++) {
         if (scanf("%d", &array[index]) != 1) {
-            printf("Invalid element input. Please enter whole numbers only.\n");
+            fprintf(stderr, "Invalid element input.\n");
             return 1;
         }
     }
 
-    printf("\nOriginal array:\n");
-    printArray(array, numberOfElements);
-
+    /* Sort the array using Bubble Sort. */
     bubbleSort(array, numberOfElements, &comparisons, &swaps);
 
-    printf("\nSorted array:\n");
-    printArray(array, numberOfElements);
-    printf("\nComparisons: %llu\n", comparisons);
-    printf("Swaps: %llu\n", swaps);
+    /*
+     * Machine-readable output for Python.
+     */
+    printf("SORTED:");
+    for (int index = 0; index < numberOfElements; index++) {
+        printf(" %d", array[index]);
+    }
+    printf("\n");
+
+    printf("COMPARISONS: %llu\n", comparisons);
+    printf("SWAPS: %llu\n", swaps);
 
     return 0;
 }
