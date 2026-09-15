@@ -31,6 +31,9 @@ void bubbleSort(
         for (int index = 0; index < end; index++) {
             (*comparisons)++;
 
+            /* Report every comparison. */
+            printf("STEP:COMPARE:%d:%d\n", index, index + 1);
+
             if (array[index] > array[index + 1]) {
                 int temporaryValue = array[index];
                 array[index] = array[index + 1];
@@ -38,6 +41,9 @@ void bubbleSort(
 
                 (*swaps)++;
                 swappedInThisPass = 1;
+
+                /* Report every swap. */
+                printf("STEP:SWAP:%d:%d\n", index, index + 1);
             }
         }
 
@@ -62,8 +68,11 @@ int main(void) {
     }
 
     if (numberOfElements < 1 || numberOfElements > MAX_ARRAY_SIZE) {
-        fprintf(stderr, "Number of elements must be between 1 and %d.\n",
-                MAX_ARRAY_SIZE);
+        fprintf(
+            stderr,
+            "Number of elements must be between 1 and %d.\n",
+            MAX_ARRAY_SIZE
+        );
         return 1;
     }
 

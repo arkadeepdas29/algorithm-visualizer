@@ -92,15 +92,31 @@ def bubble_sort():
 
     # Read C output.
     output_lines = result.stdout.strip().splitlines()
+    print("DEBUG C OUTPUT:", repr(result.stdout))
 
     sorted_array = None
     comparisons = None
     swaps = None
+    steps = []
 
     for line in output_lines:
         line = line.strip()
 
-        if line.startswith("SORTED:"):
+        if line.startswith("STEP:"):
+            parts = line.split(":")
+
+            if len(parts) == 4:
+                step_type = parts[1].lower()
+                index1 = int(parts[2])
+                index2 = int(parts[3])
+
+                steps.append({
+                    "type": step_type,
+                    "index1": index1,
+                    "index2": index2,
+            })
+
+        elif line.startswith("SORTED:"):
             numbers = line.replace("SORTED:", "", 1).strip()
 
             if numbers:
@@ -110,14 +126,13 @@ def bubble_sort():
 
         elif line.startswith("COMPARISONS:"):
             comparisons = int(
-                line.replace("COMPARISONS:", "", 1).strip()
-            )
+            line.replace("COMPARISONS:", "", 1).strip()
+        )
 
         elif line.startswith("SWAPS:"):
             swaps = int(
-                line.replace("SWAPS:", "", 1).strip()
-            )
-
+            line.replace("SWAPS:", "", 1).strip()
+        )
     if sorted_array is None or comparisons is None or swaps is None:
         return jsonify(
             error="Unexpected output from C Bubble Sort program.",
@@ -128,7 +143,8 @@ def bubble_sort():
         algorithm="Bubble Sort",
         sorted_array=sorted_array,
         comparisons=comparisons,
-        swaps=swaps
+        swaps=swaps,
+        steps=steps
     )
 
 

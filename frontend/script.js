@@ -74,39 +74,40 @@ function updateStatistics() {
 }
 
 /**
- * Pause for an amount of time based on the speed slider.
- * A higher slider value gives a shorter pause.
+ * Pause based on the speed slider.
+ * Higher speed means a shorter delay.
  */
 function sleep() {
-    const delayInMilliseconds = 20 + (100 - visualizerState.speed) * 8;
+    const delayInMilliseconds =
+        20 + (100 - visualizerState.speed) * 8;
 
     return new Promise((resolve) => {
         setTimeout(resolve, delayInMilliseconds);
     });
 }
 
-/** Change a displayed bar after its matching array value changes. */
+/** Update a displayed bar after its array value changes. */
 function updateBar(index) {
     const bar = getBars()[index];
-    const value = visualizerState.array[index];
 
     if (!bar) return;
+
+    const value = visualizerState.array[index];
 
     bar.style.height = `${value}%`;
     bar.title = `Value: ${value}`;
 }
 
-/** Enable or disable controls while an operation is running. */
+/** Enable or disable controls while sorting. */
 function setSortingControls(isSorting) {
     elements.startButton.disabled = isSorting;
     elements.algorithmSelect.disabled = isSorting;
 
-    elements.startButton.textContent = isSorting
-        ? "Sorting..."
-        : "Start";
+    elements.startButton.textContent =
+        isSorting ? "Sorting..." : "Start";
 }
 
-/** Reset the array and all statistics. */
+/** Reset the array and statistics. */
 function resetVisualizer() {
     visualizerState.runId += 1;
     visualizerState.isSorting = false;
@@ -123,97 +124,128 @@ function resetVisualizer() {
 /** Update the speed value shown beside the slider. */
 function updateSpeed() {
     visualizerState.speed = Number(elements.speedSlider.value);
-    elements.speedValue.textContent = `${visualizerState.speed}%`;
+    elements.speedValue.textContent =
+        `${visualizerState.speed}%`;
 }
 
 /**
  * Send the current array to Flask.
- * Flask then runs the C Bubble Sort executable.
+ * Flask runs the C Bubble Sort executable.
  */
 async function runBubbleSortOnBackend(array) {
-    const response = await fetch("http://127.0.0.1:5000/api/bubble-sort", {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-            array: array,
-        }),
-    });
+    const response = await fetch(
+        "http://127.0.0.1:5000/api/bubble-sort",
+        {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+                array: array,
+            }),
+        }
+    );
 
     const data = await response.json();
 
     if (!response.ok) {
-        throw new Error(data.error || "Backend request failed.");
+        throw new Error(
+            data.error || "Backend request failed."
+        );
     }
 
     return data;
 }
 
 /**
- * Animate the transition from the current array
- * to the sorted array returned by the C backend.
+ * Animate the exact comparison and swap steps
+ * returned by the C Bubble Sort engine.
  */
-async function animateBackendResult(originalArray, result) {
+async function animateBackendSteps(originalArray, result) {
     const currentRunId = visualizerState.runId;
-    const sortedArray = result.sorted_array;
+    const steps = result.steps;
 
-    visualizerState.comparisons = result.comparisons;
-    visualizerState.swaps = result.swaps;
-
-    updateStatistics();
-
-    // Show the original array before starting the animation.
+    // Start from the original array.
     visualizerState.array = [...originalArray];
+    visualizerState.comparisons = 0;
+    visualizerState.swaps = 0;
+
     renderArray();
     updateStatistics();
 
-    // Move values toward their final positions one by one.
-    for (let index = 0; index < sortedArray.length; index += 1) {
-        if (currentRunId !== visualizerState.runId) return;
+    for (const step of steps) {
+        if (currentRunId !== visualizerState.runId) {
+            return;
+        }
 
-        const targetValue = sortedArray[index];
-        const currentIndex = visualizerState.array.indexOf(
-            targetValue,
-            index
-        );
+        const index1 = step.index1;
+        const index2 = step.index2;
+        const bars = getBars();
 
-        if (currentIndex === -1) continue;
+        // Highlight the two elements being compared/swapped.
+        bars[index1]?.classList.add("comparing");
+        bars[index2]?.classList.add("comparing");
 
-        if (currentIndex !== index) {
-            const bars = getBars();
+        if (step.type === "compare") {
+            visualizerState.comparisons += 1;
 
-            bars[index]?.classList.add("comparing");
-            bars[currentIndex]?.classList.add("comparing");
+            updateStatistics();
+
+            elements.arrayStatus.textContent =
+                `Comparing index ${index1} and ${index2}`;
 
             await sleep();
+        }
 
-            if (currentRunId !== visualizerState.runId) return;
+        if (currentRunId !== visualizerState.runId) {
+            return;
+        }
 
+        if (step.type === "swap") {
             [
-                visualizerState.array[index],
-                visualizerState.array[currentIndex],
+                visualizerState.array[index1],
+                visualizerState.array[index2],
             ] = [
-                visualizerState.array[currentIndex],
-                visualizerState.array[index],
+                visualizerState.array[index2],
+                visualizerState.array[index1],
             ];
 
-            updateBar(index);
-            updateBar(currentIndex);
+            visualizerState.swaps += 1;
 
-            bars[index]?.classList.replace("comparing", "swapping");
-            bars[currentIndex]?.classList.replace("comparing", "swapping");
+            bars[index1]?.classList.replace(
+                "comparing",
+                "swapping"
+            );
+
+            bars[index2]?.classList.replace(
+                "comparing",
+                "swapping"
+            );
+
+            updateBar(index1);
+            updateBar(index2);
+            updateStatistics();
+
+            elements.arrayStatus.textContent =
+                `Swapping index ${index1} and ${index2}`;
 
             await sleep();
-
-            if (currentRunId !== visualizerState.runId) return;
-
-            clearBarHighlights();
         }
+
+        if (currentRunId !== visualizerState.runId) {
+            return;
+        }
+
+        clearBarHighlights();
     }
 
     if (currentRunId === visualizerState.runId) {
-        visualizerState.array = [...sortedArray];
+        // Use the final result returned by C.
+        visualizerState.array = [...result.sorted_array];
+
+        // Use the authoritative totals from C.
+        visualizerState.comparisons = result.comparisons;
+        visualizerState.swaps = result.swaps;
 
         renderArray();
         updateStatistics();
@@ -222,7 +254,8 @@ async function animateBackendResult(originalArray, result) {
             bar.classList.add("sorted");
         });
 
-        elements.arrayStatus.textContent = "Array sorted by C Bubble Sort";
+        elements.arrayStatus.textContent =
+            "Array sorted by C Bubble Sort";
     }
 }
 
@@ -238,6 +271,7 @@ async function startVisualization() {
     const currentRunId = visualizerState.runId;
 
     visualizerState.isSorting = true;
+
     setSortingControls(true);
     clearSortedState();
 
@@ -247,11 +281,17 @@ async function startVisualization() {
         elements.arrayStatus.textContent =
             "Sending array to C Bubble Sort...";
 
-        const result = await runBubbleSortOnBackend(originalArray);
+        const result =
+            await runBubbleSortOnBackend(originalArray);
 
-        if (currentRunId !== visualizerState.runId) return;
+        if (currentRunId !== visualizerState.runId) {
+            return;
+        }
 
-        await animateBackendResult(originalArray, result);
+        await animateBackendSteps(
+            originalArray,
+            result
+        );
     } catch (error) {
         if (currentRunId === visualizerState.runId) {
             elements.arrayStatus.textContent =
@@ -266,9 +306,20 @@ async function startVisualization() {
 }
 
 function initializeVisualizer() {
-    elements.resetButton.addEventListener("click", resetVisualizer);
-    elements.speedSlider.addEventListener("input", updateSpeed);
-    elements.startButton.addEventListener("click", startVisualization);
+    elements.resetButton.addEventListener(
+        "click",
+        resetVisualizer
+    );
+
+    elements.speedSlider.addEventListener(
+        "input",
+        updateSpeed
+    );
+
+    elements.startButton.addEventListener(
+        "click",
+        startVisualization
+    );
 
     resetVisualizer();
 }
