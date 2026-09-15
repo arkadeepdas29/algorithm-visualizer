@@ -8,12 +8,14 @@ const visualizerState = {
     runId: 0,
 };
 
+
 const elements = {
     arrayContainer: document.querySelector("#array-container"),
     arrayStatus: document.querySelector("#array-status"),
     comparisons: document.querySelector("#comparisons"),
     swaps: document.querySelector("#swaps"),
     operationLabel: document.querySelector("#operation-label"),
+    targetInput: document.querySelector("#target-input"),
 
     bestComplexity: document.querySelector("#best-complexity"),
     averageComplexity: document.querySelector("#average-complexity"),
@@ -26,13 +28,18 @@ const elements = {
     algorithmSelect: document.querySelector("#algorithm-select"),
 };
 
+
 /** Create an array of random whole numbers for the bars. */
 function generateRandomArray(length = 30, min = 10, max = 100) {
     return Array.from(
         { length },
-        () => Math.floor(Math.random() * (max - min + 1)) + min
+        () =>
+            Math.floor(
+                Math.random() * (max - min + 1)
+            ) + min
     );
 }
+
 
 /** Draw every value in the current array as a vertical bar. */
 function renderArray() {
@@ -52,32 +59,38 @@ function renderArray() {
         `${visualizerState.array.length} values ready`;
 }
 
+
 /** Return the bars currently displayed in the visualization panel. */
 function getBars() {
-    return Array.from(elements.arrayContainer.children);
+    return Array.from(
+        elements.arrayContainer.children
+    );
 }
+
 
 /** Remove temporary comparison and swap colors from every bar. */
 function clearBarHighlights() {
     getBars().forEach((bar) => {
-        bar.classList.remove("comparing", "swapping");
+        bar.classList.remove(
+            "comparing",
+            "swapping"
+        );
     });
 }
 
-/** Remove the final sorted state from every bar. */
+
+/** Remove the final sorted/found state from every bar. */
 function clearSortedState() {
     getBars().forEach((bar) => {
         bar.classList.remove("sorted");
     });
 }
 
+
 /** Update the statistics display. */
 function updateStatistics() {
     elements.comparisons.textContent =
         visualizerState.comparisons;
-
-    elements.swaps.textContent =
-        visualizerState.swaps;
 
     const algorithm =
         elements.algorithmSelect.value;
@@ -85,37 +98,84 @@ function updateStatistics() {
     // Operation label
     if (elements.operationLabel) {
         if (algorithm === "insertion") {
-            elements.operationLabel.textContent = "Shifts";
+            elements.operationLabel.textContent =
+                "Shifts";
         } else if (algorithm === "merge") {
-            elements.operationLabel.textContent = "Writes";
+            elements.operationLabel.textContent =
+                "Writes";
+        } else if (algorithm === "linear") {
+            elements.operationLabel.textContent =
+                "Found Index";
         } else {
-            elements.operationLabel.textContent = "Swaps";
+            elements.operationLabel.textContent =
+                "Swaps";
         }
+    }
+
+    // Operation value
+    if (algorithm === "linear") {
+        if (visualizerState.swaps === -1) {
+            elements.swaps.textContent = "—";
+        } else {
+            elements.swaps.textContent =
+                visualizerState.swaps;
+        }
+    } else {
+        elements.swaps.textContent =
+            visualizerState.swaps;
     }
 
     // Time complexity
     if (algorithm === "bubble") {
-        elements.bestComplexity.textContent = "O(n)";
-        elements.averageComplexity.textContent = "O(n²)";
-        elements.worstComplexity.textContent = "O(n²)";
+        elements.bestComplexity.textContent =
+            "O(n)";
+        elements.averageComplexity.textContent =
+            "O(n²)";
+        elements.worstComplexity.textContent =
+            "O(n²)";
+
     } else if (algorithm === "selection") {
-        elements.bestComplexity.textContent = "O(n²)";
-        elements.averageComplexity.textContent = "O(n²)";
-        elements.worstComplexity.textContent = "O(n²)";
+        elements.bestComplexity.textContent =
+            "O(n²)";
+        elements.averageComplexity.textContent =
+            "O(n²)";
+        elements.worstComplexity.textContent =
+            "O(n²)";
+
     } else if (algorithm === "insertion") {
-        elements.bestComplexity.textContent = "O(n)";
-        elements.averageComplexity.textContent = "O(n²)";
-        elements.worstComplexity.textContent = "O(n²)";
+        elements.bestComplexity.textContent =
+            "O(n)";
+        elements.averageComplexity.textContent =
+            "O(n²)";
+        elements.worstComplexity.textContent =
+            "O(n²)";
+
     } else if (algorithm === "merge") {
-        elements.bestComplexity.textContent = "O(n log n)";
-        elements.averageComplexity.textContent = "O(n log n)";
-        elements.worstComplexity.textContent = "O(n log n)";
+        elements.bestComplexity.textContent =
+            "O(n log n)";
+        elements.averageComplexity.textContent =
+            "O(n log n)";
+        elements.worstComplexity.textContent =
+            "O(n log n)";
+
     } else if (algorithm === "quick") {
-        elements.bestComplexity.textContent = "O(n log n)";
-        elements.averageComplexity.textContent = "O(n log n)";
-        elements.worstComplexity.textContent = "O(n²)";
+        elements.bestComplexity.textContent =
+            "O(n log n)";
+        elements.averageComplexity.textContent =
+            "O(n log n)";
+        elements.worstComplexity.textContent =
+            "O(n²)";
+
+    } else if (algorithm === "linear") {
+        elements.bestComplexity.textContent =
+            "O(1)";
+        elements.averageComplexity.textContent =
+            "O(n)";
+        elements.worstComplexity.textContent =
+            "O(n)";
     }
 }
+
 
 /**
  * Pause based on the speed slider.
@@ -123,77 +183,134 @@ function updateStatistics() {
  */
 function sleep() {
     const delayInMilliseconds =
-        20 + (100 - visualizerState.speed) * 8;
+        20 +
+        (100 - visualizerState.speed) * 8;
 
     return new Promise((resolve) => {
-        setTimeout(resolve, delayInMilliseconds);
+        setTimeout(
+            resolve,
+            delayInMilliseconds
+        );
     });
 }
+
 
 /** Update a displayed bar after its array value changes. */
 function updateBar(index) {
     const bar = getBars()[index];
 
-    if (!bar) return;
+    if (!bar) {
+        return;
+    }
 
-    const value = visualizerState.array[index];
+    const value =
+        visualizerState.array[index];
 
     bar.style.height = `${value}%`;
     bar.title = `Value: ${value}`;
 }
 
-/** Enable or disable controls while sorting. */
+
+/** Enable or disable controls while an algorithm is running. */
 function setSortingControls(isSorting) {
-    elements.startButton.disabled = isSorting;
-    elements.algorithmSelect.disabled = isSorting;
+    elements.startButton.disabled =
+        isSorting;
+
+    elements.algorithmSelect.disabled =
+        isSorting;
+
+    elements.targetInput.disabled =
+        isSorting;
 
     elements.startButton.textContent =
-        isSorting ? "Sorting..." : "Start";
+        isSorting
+            ? "Running..."
+            : "Start";
 }
+
 
 /** Reset the array and statistics. */
 function resetVisualizer() {
     visualizerState.runId += 1;
     visualizerState.isSorting = false;
-    visualizerState.array = generateRandomArray();
+
+    visualizerState.array =
+        generateRandomArray();
+
     visualizerState.comparisons = 0;
+
     visualizerState.swaps = 0;
 
     clearSortedState();
+    clearBarHighlights();
+
     renderArray();
     updateStatistics();
+
     setSortingControls(false);
 }
 
+
 /** Update the speed value shown beside the slider. */
 function updateSpeed() {
-    visualizerState.speed = Number(elements.speedSlider.value);
+    visualizerState.speed =
+        Number(elements.speedSlider.value);
+
     elements.speedValue.textContent =
         `${visualizerState.speed}%`;
 }
 
+
 /**
  * Send the current array to Flask.
- * Flask runs the C Bubble Sort executable.
+ * Flask runs the corresponding C executable.
  */
-async function runAlgorithmOnBackend(array, algorithm) {
+async function runAlgorithmOnBackend(
+    array,
+    algorithm
+) {
     let endpoint;
+
+    let requestBody = {
+        array: array,
+    };
 
     if (algorithm === "bubble") {
         endpoint =
             "http://127.0.0.1:5000/api/bubble-sort";
+
     } else if (algorithm === "selection") {
         endpoint =
             "http://127.0.0.1:5000/api/selection-sort";
+
     } else if (algorithm === "insertion") {
         endpoint =
             "http://127.0.0.1:5000/api/insertion-sort";
+
     } else if (algorithm === "merge") {
         endpoint =
             "http://127.0.0.1:5000/api/merge-sort";
+
     } else if (algorithm === "quick") {
         endpoint =
             "http://127.0.0.1:5000/api/quick-sort";
+
+    } else if (algorithm === "linear") {
+        endpoint =
+            "http://127.0.0.1:5000/api/linear-search";
+
+        const target = Number(
+            elements.targetInput.value
+        );
+
+        if (!Number.isInteger(target)) {
+            throw new Error(
+                "Please enter a valid search target."
+            );
+        }
+
+        requestBody.target = target;
+
     } else {
         throw new Error(
             "This algorithm is not implemented yet."
@@ -204,55 +321,239 @@ async function runAlgorithmOnBackend(array, algorithm) {
         endpoint,
         {
             method: "POST",
+
             headers: {
-                "Content-Type": "application/json",
+                "Content-Type":
+                    "application/json",
             },
-            body: JSON.stringify({
-                array: array,
-            }),
+
+            body: JSON.stringify(
+                requestBody
+            ),
         }
     );
 
-    const data = await response.json();
+    const data =
+        await response.json();
 
     if (!response.ok) {
         throw new Error(
-            data.error || "Backend request failed."
+            data.error ||
+            "Backend request failed."
         );
     }
 
     return data;
 }
 
+
 /**
- * Animate the exact comparison and swap steps
- * returned by the C Bubble Sort engine.
+ * Animate the exact steps returned
+ * by the C algorithm engine.
  */
-async function animateBackendSteps(originalArray, result) {
-    const currentRunId = visualizerState.runId;
+async function animateBackendSteps(
+    originalArray,
+    result
+) {
+    const currentRunId =
+        visualizerState.runId;
+
     const steps = result.steps;
 
-    visualizerState.array = [...originalArray];
+    visualizerState.array =
+        [...originalArray];
+
     visualizerState.comparisons = 0;
+
     visualizerState.swaps = 0;
 
     renderArray();
     updateStatistics();
 
+
+    // =================================
+    // Linear Search
+    // =================================
+
+    if (
+        result.algorithm ===
+        "Linear Search"
+    ) {
+        for (const step of steps) {
+            if (
+                currentRunId !==
+                visualizerState.runId
+            ) {
+                return;
+            }
+
+            const index1 =
+                step.index1;
+
+            const target =
+                step.index2;
+
+            const bars = getBars();
+
+
+            // Compare
+            if (
+                step.type ===
+                "compare"
+            ) {
+                clearBarHighlights();
+
+                bars[index1]?.classList.add(
+                    "comparing"
+                );
+
+                visualizerState.comparisons +=
+                    1;
+
+                updateStatistics();
+
+                elements.arrayStatus.textContent =
+                    `Checking index ${index1}: ${visualizerState.array[index1]} == ${target}?`;
+
+                await sleep();
+            }
+
+
+            if (
+                currentRunId !==
+                visualizerState.runId
+            ) {
+                return;
+            }
+
+
+            // Found
+            if (
+                step.type ===
+                "found"
+            ) {
+                clearBarHighlights();
+
+                bars[index1]?.classList.add(
+                    "sorted"
+                );
+
+                elements.arrayStatus.textContent =
+                    `Found ${target} at index ${index1}`;
+
+                await sleep();
+            }
+
+
+            if (
+                currentRunId !==
+                visualizerState.runId
+            ) {
+                return;
+            }
+
+
+            // Not Found
+            if (
+                step.type ===
+                "not_found"
+            ) {
+                clearBarHighlights();
+
+                elements.arrayStatus.textContent =
+                    `${target} was not found in the array`;
+
+                await sleep();
+            }
+
+
+            clearBarHighlights();
+        }
+
+
+        // Final Linear Search result
+        if (
+            currentRunId ===
+            visualizerState.runId
+        ) {
+            visualizerState.comparisons =
+                result.comparisons;
+
+            if (
+                result.found_index !==
+                -1
+            ) {
+                visualizerState.swaps =
+                    result.found_index;
+
+                const bars =
+                    getBars();
+
+                clearBarHighlights();
+
+                bars[
+                    result.found_index
+                ]?.classList.add(
+                    "sorted"
+                );
+
+                elements.arrayStatus.textContent =
+                    `Linear Search: ${result.target} found at index ${result.found_index}`;
+
+            } else {
+                visualizerState.swaps =
+                    -1;
+
+                clearBarHighlights();
+
+                elements.arrayStatus.textContent =
+                    `Linear Search: ${result.target} not found`;
+            }
+
+            updateStatistics();
+        }
+
+        return;
+    }
+
+
+    // =================================
+    // Sorting Algorithms
+    // =================================
+
     for (const step of steps) {
-        if (currentRunId !== visualizerState.runId) {
+        if (
+            currentRunId !==
+            visualizerState.runId
+        ) {
             return;
         }
 
-        const index1 = step.index1;
-        const index2 = step.index2;
-        const bars = getBars();
+        const index1 =
+            step.index1;
 
-        if (step.type === "compare") {
-            bars[index1]?.classList.add("comparing");
-            bars[index2]?.classList.add("comparing");
+        const index2 =
+            step.index2;
 
-            visualizerState.comparisons += 1;
+        const bars =
+            getBars();
+
+
+        // Compare
+        if (
+            step.type ===
+            "compare"
+        ) {
+            bars[index1]?.classList.add(
+                "comparing"
+            );
+
+            bars[index2]?.classList.add(
+                "comparing"
+            );
+
+            visualizerState.comparisons +=
+                1;
 
             updateStatistics();
 
@@ -262,13 +563,27 @@ async function animateBackendSteps(originalArray, result) {
             await sleep();
         }
 
-        if (currentRunId !== visualizerState.runId) {
+
+        if (
+            currentRunId !==
+            visualizerState.runId
+        ) {
             return;
         }
 
-        if (step.type === "swap") {
-            bars[index1]?.classList.add("swapping");
-            bars[index2]?.classList.add("swapping");
+
+        // Swap
+        if (
+            step.type ===
+            "swap"
+        ) {
+            bars[index1]?.classList.add(
+                "swapping"
+            );
+
+            bars[index2]?.classList.add(
+                "swapping"
+            );
 
             [
                 visualizerState.array[index1],
@@ -278,10 +593,12 @@ async function animateBackendSteps(originalArray, result) {
                 visualizerState.array[index1],
             ];
 
-            visualizerState.swaps += 1;
+            visualizerState.swaps +=
+                1;
 
             updateBar(index1);
             updateBar(index2);
+
             updateStatistics();
 
             elements.arrayStatus.textContent =
@@ -290,20 +607,35 @@ async function animateBackendSteps(originalArray, result) {
             await sleep();
         }
 
-        if (currentRunId !== visualizerState.runId) {
+
+        if (
+            currentRunId !==
+            visualizerState.runId
+        ) {
             return;
         }
 
-        if (step.type === "write") {
-            const bar = bars[index1];
 
-            bar?.classList.add("swapping");
+        // Merge Sort Write
+        if (
+            step.type ===
+            "write"
+        ) {
+            const bar =
+                bars[index1];
 
-            visualizerState.array[index1] = index2;
+            bar?.classList.add(
+                "swapping"
+            );
 
-            visualizerState.swaps += 1;
+            visualizerState.array[index1] =
+                index2;
+
+            visualizerState.swaps +=
+                1;
 
             updateBar(index1);
+
             updateStatistics();
 
             elements.arrayStatus.textContent =
@@ -312,29 +644,47 @@ async function animateBackendSteps(originalArray, result) {
             await sleep();
         }
 
-        if (currentRunId !== visualizerState.runId) {
+
+        if (
+            currentRunId !==
+            visualizerState.runId
+        ) {
             return;
         }
 
         clearBarHighlights();
     }
 
-    if (currentRunId === visualizerState.runId) {
-        visualizerState.array = [...result.sorted_array];
 
-        visualizerState.comparisons = result.comparisons;
+    // Final sorting result
+    if (
+        currentRunId ===
+        visualizerState.runId
+    ) {
+        visualizerState.array =
+            [...result.sorted_array];
 
-        if (result.algorithm === "Merge Sort") {
-            visualizerState.swaps = result.writes;
+        visualizerState.comparisons =
+            result.comparisons;
+
+        if (
+            result.algorithm ===
+            "Merge Sort"
+        ) {
+            visualizerState.swaps =
+                result.writes;
         } else {
-            visualizerState.swaps = result.swaps;
+            visualizerState.swaps =
+                result.swaps;
         }
 
         renderArray();
         updateStatistics();
 
         getBars().forEach((bar) => {
-            bar.classList.add("sorted");
+            bar.classList.add(
+                "sorted"
+            );
         });
 
         elements.arrayStatus.textContent =
@@ -342,21 +692,27 @@ async function animateBackendSteps(originalArray, result) {
     }
 }
 
-/** Start the selected sorting algorithm using the Flask + C backend. */
+
+/** Start the selected algorithm using Flask + C backend. */
 async function startVisualization() {
     const selectedAlgorithm =
         elements.algorithmSelect.value;
 
-    if (visualizerState.isSorting) {
+
+    if (
+        visualizerState.isSorting
+    ) {
         return;
     }
+
 
     if (
         selectedAlgorithm !== "bubble" &&
         selectedAlgorithm !== "selection" &&
         selectedAlgorithm !== "insertion" &&
         selectedAlgorithm !== "merge" &&
-        selectedAlgorithm !== "quick"
+        selectedAlgorithm !== "quick" &&
+        selectedAlgorithm !== "linear"
     ) {
         elements.arrayStatus.textContent =
             "This algorithm is not implemented yet.";
@@ -364,57 +720,134 @@ async function startVisualization() {
         return;
     }
 
-    const currentRunId = visualizerState.runId;
 
-    visualizerState.isSorting = true;
+    const currentRunId =
+        visualizerState.runId;
+
+    visualizerState.isSorting =
+        true;
 
     setSortingControls(true);
-    clearSortedState();
 
-    const originalArray = [...visualizerState.array];
+    clearSortedState();
+    clearBarHighlights();
+
+
+    const originalArray =
+        [...visualizerState.array];
+
 
     try {
         let algorithmName;
 
-        if (selectedAlgorithm === "bubble") {
-            algorithmName = "Bubble Sort";
-        } else if (selectedAlgorithm === "selection") {
-            algorithmName = "Selection Sort";
-        } else if (selectedAlgorithm === "insertion") {
-            algorithmName = "Insertion Sort";
-        } else if (selectedAlgorithm === "merge") {
-            algorithmName = "Merge Sort";
+
+        if (
+            selectedAlgorithm ===
+            "bubble"
+        ) {
+            algorithmName =
+                "Bubble Sort";
+
+        } else if (
+            selectedAlgorithm ===
+            "selection"
+        ) {
+            algorithmName =
+                "Selection Sort";
+
+        } else if (
+            selectedAlgorithm ===
+            "insertion"
+        ) {
+            algorithmName =
+                "Insertion Sort";
+
+        } else if (
+            selectedAlgorithm ===
+            "merge"
+        ) {
+            algorithmName =
+                "Merge Sort";
+
+        } else if (
+            selectedAlgorithm ===
+            "quick"
+        ) {
+            algorithmName =
+                "Quick Sort";
+
         } else {
-            algorithmName = "Quick Sort";
+            algorithmName =
+                "Linear Search";
         }
+
+
+        // Validate Linear Search target
+        if (
+            selectedAlgorithm ===
+            "linear"
+        ) {
+            const target =
+                Number(
+                    elements.targetInput.value
+                );
+
+            if (
+                !Number.isInteger(
+                    target
+                )
+            ) {
+                elements.arrayStatus.textContent =
+                    "Please enter a valid search target.";
+
+                return;
+            }
+        }
+
 
         elements.arrayStatus.textContent =
             `Sending array to C ${algorithmName}...`;
 
-        const result = await runAlgorithmOnBackend(
-            originalArray,
-            selectedAlgorithm
-        );
 
-        if (currentRunId !== visualizerState.runId) {
+        const result =
+            await runAlgorithmOnBackend(
+                originalArray,
+                selectedAlgorithm
+            );
+
+
+        if (
+            currentRunId !==
+            visualizerState.runId
+        ) {
             return;
         }
+
 
         await animateBackendSteps(
             originalArray,
             result
         );
+
     } catch (error) {
-        if (currentRunId === visualizerState.runId) {
+        if (
+            currentRunId ===
+            visualizerState.runId
+        ) {
             elements.arrayStatus.textContent =
                 `Error: ${error.message}`;
         }
+
     } finally {
-        visualizerState.isSorting = false;
+        visualizerState.isSorting =
+            false;
+
         setSortingControls(false);
     }
 }
 
+
+/** Initialize the visualizer. */
 function initializeVisualizer() {
     elements.resetButton.addEventListener(
         "click",
@@ -433,5 +866,6 @@ function initializeVisualizer() {
 
     resetVisualizer();
 }
+
 
 initializeVisualizer();
