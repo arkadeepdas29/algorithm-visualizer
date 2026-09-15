@@ -132,9 +132,26 @@ function updateSpeed() {
  * Send the current array to Flask.
  * Flask runs the C Bubble Sort executable.
  */
-async function runBubbleSortOnBackend(array) {
+async function runAlgorithmOnBackend(array, algorithm) {
+    let endpoint;
+
+    if (algorithm === "bubble") {
+        endpoint =
+            "http://127.0.0.1:5000/api/bubble-sort";
+    } else if (algorithm === "selection") {
+        endpoint =
+            "http://127.0.0.1:5000/api/selection-sort";
+    } else if (algorithm === "insertion") {
+        endpoint =
+            "http://127.0.0.1:5000/api/insertion-sort";
+    } else {
+        throw new Error(
+            "This algorithm is not implemented yet."
+        );
+    }
+
     const response = await fetch(
-        "http://127.0.0.1:5000/api/bubble-sort",
+        endpoint,
         {
             method: "POST",
             headers: {
@@ -261,10 +278,21 @@ async function animateBackendSteps(originalArray, result) {
 
 /** Start Bubble Sort using the Flask + C backend. */
 async function startVisualization() {
+    const selectedAlgorithm =
+        elements.algorithmSelect.value;
+
+    if (visualizerState.isSorting) {
+        return;
+    }
+
     if (
-        visualizerState.isSorting ||
-        elements.algorithmSelect.value !== "bubble"
+        selectedAlgorithm !== "bubble" &&
+        selectedAlgorithm !== "selection" &&
+        selectedAlgorithm !== "insertion"
     ) {
+        elements.arrayStatus.textContent =
+            "This algorithm is not implemented yet.";
+
         return;
     }
 
@@ -278,11 +306,20 @@ async function startVisualization() {
     const originalArray = [...visualizerState.array];
 
     try {
-        elements.arrayStatus.textContent =
-            "Sending array to C Bubble Sort...";
+        const algorithmName =
+            selectedAlgorithm === "bubble"
+                ? "Bubble Sort"
+                : selectedAlgorithm === "selection"
+                  ? "Selection Sort"
+                  : "Insertion Sort";
 
-        const result =
-            await runBubbleSortOnBackend(originalArray);
+        elements.arrayStatus.textContent =
+            `Sending array to C ${algorithmName}...`;
+
+        const result = await runAlgorithmOnBackend(
+            originalArray,
+            selectedAlgorithm
+        );
 
         if (currentRunId !== visualizerState.runId) {
             return;
